@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Warung - Firebase</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { background: #f0f2f5; color: #333; }
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 230px; background: #1e293b; color: #cbd5e1; padding: 20px 0; position: fixed; height: 100vh; overflow-y: auto; }
+  .sidebar h1 { color: #fff; font-size: 18px; padding: 0 20px 20px; border-bottom: 1px solid #334155; margin-bottom: 15px; }
+  .sidebar h1 span { display: block; font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 400; }
+  .nav-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
+  .nav-item:hover { background: #334155; color: #fff; }
+  .nav-item.active { background: #0f172a; color: #38bdf8; border-left-color: #38bdf8; }
+  .main { flex: 1; margin-left: 230px; padding: 25px; }
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn 0.3s; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px);} to {opacity:1; transform:translateY(0);} }
+  h2 { font-size: 22px; margin-bottom: 20px; color: #1e293b; }
+  h3 { font-size: 15px; margin-bottom: 10px; color: #475569; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+  .card { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .card .label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card .value { font-size: 24px; font-weight: 700; margin-top: 6px; color: #1e293b; }
+  .card.blue .value { color: #0284c7; }
+  .card.green .value { color: #16a34a; }
+  .card.orange .value { color: #ea580c; }
+  .card.red .value { color: #dc2626; }
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 13px; margin-bottom: 5px; color: #475569; font-weight: 500; }
+  input, select, textarea { width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; transition: 0.2s; }
+  input:focus, select:focus { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,0.15); }
+  .btn { padding: 9px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; }
+  .btn-primary { background: #0ea5e9; color: #fff; }
+  .btn-primary:hover { background: #0284c7; }
+  .btn-success { background: #16a34a; color: #fff; }
+  .btn-success:hover { background: #15803d; }
+  .btn-danger { background: #dc2626; color: #fff; }
+  .btn-danger:hover { background: #b91c1c; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-outline { background: #fff; border: 1px solid #cbd5e1; color: #475569; }
+  .btn-outline:hover { background: #f1f5f9; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+  th, td { padding: 10px 12px; text-align: left; font-size: 13px; border-bottom: 1px solid #e2e8f0; }
+  th { background: #f8fafc; font-weight: 600; color: #475569; font-size: 12px; text-transform: uppercase; }
+  tr:hover { background: #f8fafc; }
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .toolbar { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
+  .toolbar input { max-width: 300px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .box { background: #fff; padding: 18px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .kasir-layout { display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+  .produk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 10px; max-height: 500px; overflow-y: auto; padding: 5px; }
+  .produk-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; cursor: pointer; transition: 0.2s; text-align: center; }
+  .produk-card:hover { border-color: #0ea5e9; box-shadow: 0 2px 8px rgba(14,165,233,0.15); transform: translateY(-1px); }
+  .produk-card .nama { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .produk-card .harga { color: #0ea5e9; font-weight: 700; font-size: 14px; }
+  .produk-card .stok { font-size: 11px; color: #64748b; margin-top: 4px; }
+  .produk-card.habis { opacity: 0.5; cursor: not-allowed; }
+  .keranjang { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; margin: 10px 0; }
+  .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8fafc; border-radius: 6px; font-size: 13px; }
+  .cart-item .info { flex: 1; }
+  .cart-item .qty-controls { display: flex; gap: 4px; align-items: center; }
+  .cart-item button { width: 24px; height: 24px; border-radius: 4px; border: none; background: #0ea5e9; color: #fff; cursor: pointer; font-weight: 700; }
+  .cart-item button:hover { background: #0284c7; }
+  .cart-item .qty { min-width: 25px; text-align: center; font-weight: 600; }
+  .total-box { background: #0f172a; color: #fff; padding: 15px; border-radius: 8px; }
+  .total-box .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+  .total-box .row.total { font-size: 20px; font-weight: 700; margin-top: 10px; padding-top: 10px; border-top: 1px solid #334155; color: #38bdf8; }
+  .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-danger { background: #fee2e2; color: #b91c1c; }
+  .badge-warning { background: #fef3c7; color: #b45309; }
+  .badge-success { background: #dcfce7; color: #15803d; }
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+  .modal-bg.show { display: flex; }
+  .modal { background: #fff; padding: 25px; border-radius: 10px; max-width: 450px; width: 90%; max-height: 90vh; overflow-y: auto; }
+  .modal h3 { margin-bottom: 15px; font-size: 18px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .empty { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
+  .firebase-status { display: inline-block; padding: 3px 10px; border-radius: 30px; font-size: 11px; font-weight: 600; margin-left: 10px; vertical-align: middle; }
+  .firebase-status.online { background: #dcfce7; color: #15803d; }
+  .firebase-status.offline { background: #fee2e2; color: #b91c1c; }
+  .firebase-status.syncing { background: #fef3c7; color: #b45309; }
+  .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.85); z-index: 500; align-items: center; justify-content: center; flex-direction: column; color: #fff; }
+  .loading-overlay.show { display: flex; }
+  .spinner { width: 50px; height: 50px; border: 4px solid #334155; border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { margin-top: 15px; font-size: 14px; color: #cbd5e1; }
+  @media (max-width: 768px) {
+    .sidebar { width: 60px; }
+    .sidebar h1, .nav-item span.label { display: none; }
+    .nav-item { justify-content: center; padding: 12px 0; font-size: 20px; }
+    .main { margin-left: 60px; padding: 15px; }
+    .kasir-layout, .grid-2 { grid-template-columns: 1fr; }
+    .toolbar input { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <h1>🏪 Data Warung<span id="sidebarNama">Warung Ibu</span></h1>
+    <div class="nav-item active" data-page="dashboard">🏠 <span class="label">Dashboard</span></div>
+    <div class="nav-item" data-page="barang">📦 <span class="label">Data Barang</span></div>
+    <div class="nav-item" data-page="penjualan">🛒 <span class="label">Penjualan</span></div>
+    <div class="nav-item" data-page="riwayat">📋 <span class="label">Riwayat</span></div>
+    <div class="nav-item" data-page="keuangan">💰 <span class="label">Keuangan</span></div>
+    <div class="nav-item" data-page="stok">⚠️ <span class="label">Stok Menipis</span></div>
+    <div class="nav-item" data-page="pengaturan">⚙️ <span class="label">Pengaturan</span></div>
+  </aside>
+
+  <main class="main">
+    <section class="page active" id="page-dashboard">
+      <h2>🏠 Dashboard <span class="firebase-status" id="firebaseStatus">● Menghubungkan...</span></h2>
+      <div class="cards">
+        <div class="card green"><div class="label">Penjualan Hari Ini</div><div class="value" id="dashPenjualan">Rp 0</div></div>
+        <div class="card blue"><div class="label">Transaksi Hari Ini</div><div class="value" id="dashTrx">0</div></div>
+        <div class="card orange"><div class="label">Total Barang</div><div class="value" id="dashBarang">0</div></div>
+        <div class="card red"><div class="label">Stok Menipis</div><div class="value" id="dashMenipis">0</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="box"><h3>⚠️ Barang Hampir Habis</h3><div id="dashStokList"></div></div>
+        <div class="box"><h3>📊 Ringkasan Keuangan Bulan Ini</h3><div id="dashKeuangan"></div></div>
+      </div>
+    </section>
+
+    <section class="page" id="page-barang">
+      <h2>📦 Data Barang</h2>
+      <div class="toolbar">
+        <input type="text" id="searchBarang" placeholder="🔍 Cari barang..." oninput="renderBarang()">
+        <button class="btn btn-primary" onclick="openModalBarang()">+ Tambah Barang</button>
+      </div>
+      <table>
+        <thead><tr><th>Nama Barang</th><th class="text-right">Harga Beli</th><th class="text-right">Harga Jual</th><th class="text-center">Stok</th><th class="text-center">Min</th><th class="text-center">Aksi</th></tr></thead>
+        <tbody id="tbodyBarang"></tbody>
+      </table>
+    </section>
+
+    <section class="page" id="page-penjualan">
+      <h2>🛒 Penjualan</h2>
+      <div class="kasir-layout">
+        <div>
+          <input type="text" id="searchKasir" placeholder="🔍 Cari produk..." oninput="renderProdukGrid()" style="margin-bottom:12px">
+          <div class="produk-grid" id="produkGrid"></div>
+        </div>
+        <div class="box">
+          <h3>🛍️ Keranjang</h3>
+          <div class="keranjang" id="keranjang"></div>
+          <div class="total-box">
+            <div class="row total"><span>Total</span><span id="cartTotal">Rp 0</span></div>
+            <div class="form-group" style="margin-top:12px">
+              <label style="color:#cbd5e1">Uang Bayar (Rp)</label>
+              <input type="number" id="uangBayar" oninput="hitungKembalian()" style="background:#1e293b;color:#fff;border-color:#334155">
+            </div>
+            <div class="row total" style="font-size:16px"><span>Kembalian</span><span id="kembalian">Rp 0</span></div>
+          </div>
+          <button class="btn btn-success" style="width:100%;margin-top:12px" onclick="simpanTransaksi()">✅ Simpan Transaksi</button>
+          <button class="btn btn-outline" style="width:100%;margin-top:8px" onclick="clearCart()">🗑️ Kosongkan</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-riwayat">
+      <h2>📋 Riwayat Penjualan</h2>
+      <div class="toolbar">
+        <input type="date" id="filterRiwayat" onchange="renderRiwayat()" style="max-width:200px">
+        <button class="btn btn-outline" onclick="document.getElementById('filterRiwayat').value='';renderRiwayat()">Reset</button>
+      </div>
+      <table>
+        <thead><tr><th>No. Transaksi</th><th>Tanggal</th><th>Item</th><th class="text-right">Total</th><th class="text-center">Aksi</th></tr></thead>
+        <tbody id="tbodyRiwayat"></tbody>
+      </table>
+    </section>
+
+    <section class="page" id="page-keuangan">
+      <h2>💰 Keuangan</h2>
+      <div class="cards">
+        <div class="card green"><div class="label">Total Pemasukan</div><div class="value" id="finMasuk">Rp 0</div></div>
+        <div class="card red"><div class="label">Total Pengeluaran</div><div class="value" id="finKeluar">Rp 0</div></div>
+        <div class="card blue"><div class="label">Laba Bersih</div><div class="value" id="finLaba">Rp 0</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="box">
+          <h3>➕ Catat Pengeluaran</h3>
+          <div class="form-group"><label>Tanggal</label><input type="date" id="pengTgl"></div>
+          <div class="form-group"><label>Kategori</label>
+            <select id="pengKategori"><option>Belanja Stok</option><option>Listrik</option><option>Air</option><option>Gaji</option><option>Lain-lain</option></select>
+          </div>
+          <div class="form-group"><label>Keterangan</label><input type="text" id="pengKet" placeholder="Contoh: Beli gula 5kg"></div>
+          <div class="form-group"><label>Jumlah (Rp)</label><input type="number" id="pengJumlah"></div>
+          <button class="btn btn-primary" onclick="tambahPengeluaran()">Simpan Pengeluaran</button>
+        </div>
+        <div class="box">
+          <h3>📋 Riwayat Pengeluaran</h3>
+          <div style="max-height:300px;overflow-y:auto">
+            <table><thead><tr><th>Tanggal</th><th>Keterangan</th><th class="text-right">Jumlah</th><th></th></tr></thead><tbody id="tbodyPengeluaran"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-stok">
+      <h2>⚠️ Stok Menipis</h2>
+      <p style="color:#64748b;margin-bottom:15px;font-size:14px">Daftar barang yang perlu segera dibeli ulang.</p>
+      <div id="stokMenipisContainer"></div>
+    </section>
+
+    <section class="page" id="page-pengaturan">
+      <h2>⚙️ Pengaturan</h2>
+      <div class="grid-2">
+        <div class="box">
+          <h3>🏪 Identitas Warung</h3>
+          <div class="form-group"><label>Nama Warung</label><input type="text" id="setNama" placeholder="Warung Ibu"></div>
+          <div class="form-group"><label>Alamat</label><input type="text" id="setAlamat" placeholder="Jl. Contoh No. 1"></div>
+          <div class="form-group"><label>No. Telepon / WA</label><input type="text" id="setTelp" placeholder="0812xxxx"></div>
+          <button class="btn btn-primary" onclick="simpanPengaturan()">💾 Simpan</button>
+        </div>
+        <div class="box">
+          <h3>💾 Backup & Restore Data</h3>
+          <p style="font-size:13px;color:#64748b;margin-bottom:12px">Data utama tersimpan di Firebase. Backup ini untuk salinan lokal.</p>
+          <button class="btn btn-success" onclick="backupData()" style="margin-bottom:10px">⬇️ Download Backup</button>
+          <br>
+          <input type="file" id="fileRestore" accept=".json" onchange="restoreData(event)" style="padding:6px">
+          <hr style="margin:20px 0;border:none;border-top:1px solid #e2e8f0">
+          <h3 style="color:#dc2626">⚠️ Zona Berbahaya</h3>
+          <p style="font-size:13px;color:#64748b;margin-bottom:12px">Hapus semua data di Firebase & lokal.</p>
+          <button class="btn btn-danger" onclick="resetSemua()">🗑️ Reset Semua Data</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Menghubungkan ke Firebase...</div>
+</div>
+
+<div class="modal-bg" id="modalBarang">
+  <div class="modal">
+    <h3 id="modalBarangTitle">Tambah Barang</h3>
+    <input type="hidden" id="editId">
+    <div class="form-group"><label>Nama Barang</label><input type="text" id="fNama" placeholder="Contoh: Indomie Goreng"></div>
+    <div class="form-group"><label>Harga Beli (Rp)</label><input type="number" id="fBeli"></div>
+    <div class="form-group"><label>Harga Jual (Rp)</label><input type="number" id="fJual"></div>
+    <div class="form-group"><label>Stok</label><input type="number" id="fStok"></div>
+    <div class="form-group"><label>Stok Minimum (alert jika ≤)</label><input type="number" id="fMin" value="5"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModalBarang()">Batal</button>
+      <button class="btn btn-primary" onclick="simpanBarang()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalDetail">
+  <div class="modal">
+    <h3>📄 Detail Transaksi</h3>
+    <div id="detailContent"></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="document.getElementById('modalDetail').classList.remove('show')">Tutup</button></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDxiDzk0n4VB9AqqT49sJxn8NDY3ktOf2s",
+  authDomain: "xii-tjkt-3.firebaseapp.com",
+  databaseURL: "https://xii-tjkt-3-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "xii-tjkt-3",
+  storageBucket: "xii-tjkt-3.firebasestorage.app",
+  messagingSenderId: "241956035753",
+  appId: "1:241956035753:web:c712603315b474c5909db8",
+  measurementId: "G-0M226Y1LLJ"
+};
+
+let database = null;
+let firebaseConnected = false;
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  database = firebase.database();
+  firebaseConnected = true;
+  console.log("✅ Firebase Connected!");
+} catch (error) {
+  console.warn("⚠️ Firebase tidak terhubung:", error.message);
+  firebaseConnected = false;
+  database = null;
+}
+
+const firebaseStatusEl = document.getElementById('firebaseStatus');
+function setFirebaseStatus(status, text) {
+  if (!firebaseStatusEl) return;
+  firebaseStatusEl.className = 'firebase-status ' + status;
+  firebaseStatusEl.textContent = text;
+}
+if (firebaseConnected) {
+  setFirebaseStatus('online', '● Firebase Online');
+} else {
+  setFirebaseStatus('offline', '● Offline (Local Storage)');
+}
+
+const STORAGE_KEY = 'warung_data_v1';
+const FB_PATH = 'warung';
+
+let state = {
+  barang: [],
+  transaksi: [],
+  pengeluaran: [],
+  pengaturan: { nama: 'Warung Ibu', alamat: '', telp: '' }
+};
+
+let cart = [];
+let isSyncing = false;
+
+function fmtRp(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+function saveLocalCache() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch(e) { console.warn('Cache gagal:', e); }
+}
+
+function loadLocalCache() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    try {
+      const data = JSON.parse(raw);
+      state = { ...state, ...data };
+    } catch(e) {}
+  }
+  updateSidebarNama();
+  renderAll();
+}
+
+function updateSidebarNama() {
+  document.getElementById('sidebarNama').textContent = state.pengaturan.nama || 'Warung Ibu';
+}
+
+function initFirebaseSync() {
+  if (!firebaseConnected || !database) return;
+
+  document.getElementById('loadingOverlay').classList.add('show');
+
+  database.ref(FB_PATH + '/barang').on('value', (snap) => {
+    const data = snap.val();
+    state.barang = data ? Object.values(data) : [];
+    saveLocalCache();
+    renderAll();
+  }, (err) => {
+    console.warn('Barang listener error:', err);
+  });
+
+  database.ref(FB_PATH + '/transaksi').on('value', (snap) => {
+    const data = snap.val();
+    state.transaksi = data ? Object.values(data).sort((a,b) => b.ts - a.ts) : [];
+    saveLocalCache();
+    renderAll();
+  }, (err) => {
+    console.warn('Transaksi listener error:', err);
+  });
+
+  database.ref(FB_PATH + '/pengeluaran').on('value', (snap) => {
+    const data = snap.val();
+    state.pengeluaran = data ? Object.values(data).sort((a,b) => b.ts - a.ts) : [];
+    saveLocalCache();
+    renderAll();
+  }, (err) => {
+    console.warn('Pengeluaran listener error:', err);
+  });
+
+  database.ref(FB_PATH + '/pengaturan').on('value', (snap) => {
+    const data = snap.val();
+    if (data) {
+      state.pengaturan = data;
+      updateSidebarNama();
+      renderPengaturan();
+    }
+  }, (err) => {
+    console.warn('Pengaturan listener error:', err);
+  });
+
+  setTimeout(() => {
+    document.getElementById('loadingOverlay').classList.remove('show');
+  }, 800);
+}
+
+function saveBarangToFirebase(barang) {
+  if (!firebaseConnected || !database) {
+    saveLocalCache();
+    return Promise.resolve();
+  }
+  return database.ref(FB_PATH + '/barang/' + barang.id).set(barang)
+    .catch(err => {
+      console.error('Gagal simpan barang:', err);
+      alert('⚠️ Gagal simpan ke Firebase, data disimpan lokal.');
+      saveLocalCache();
+    });
+}
+
+function deleteBarangFromFirebase(id) {
+  if (!firebaseConnected || !database) {
+    saveLocalCache();
+    return Promise.resolve();
+  }
+  return database.ref(FB_PATH + '/barang/' + id).remove()
+    .catch(err => console.error('Gagal hapus barang:', err));
+}
+
+function saveTransaksiToFirebase(trx) {
+  if (!firebaseConnected || !database) {
+    saveLocalCache();
+    return Promise.resolve();
+  }
+  return database.ref(FB_PATH + '/transaksi/' + trx.id).set(trx)
+    .catch(err => {
+      console.error('Gagal simpan transaksi:', err);
+      alert('⚠️ Gagal simpan transaksi ke Firebase.');
+    });
+}
+
+function savePengeluaranToFirebase(p) {
+  if (!firebaseConnected || !database) {
+    saveLocalCache();
+    return Promise.resolve();
+  }
+  return database.ref(FB_PATH + '/pengeluaran/' + p.id).set(p)
+    .catch(err => console.error('Gagal simpan pengeluaran:', err));
+}
+
+function deletePengeluaranFromFirebase(id) {
+  if (!firebaseConnected || !database) {
+    saveLocalCache();
+    return Promise.resolve();
+  }
+  return database.ref(FB_PATH + '/pengeluaran/' + id).remove()
+    .catch(err => console.error('Gagal hapus pengeluaran:', err));
+}
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const page = item.dataset.page;
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('page-' + page).classList.add('active');
+    renderAll();
+  });
+});
+
+function renderAll() {
+  renderDashboard();
+  renderBarang();
+  renderProdukGrid();
+  renderCart();
+  renderRiwayat();
+  renderKeuangan();
+  renderStokMenipis();
+  renderPengaturan();
+}
+
+function renderDashboard() {
+  const today = todayStr();
+  const trxToday = state.transaksi.filter(t => t.tgl === today);
+  const totalToday = trxToday.reduce((s,t) => s + t.total, 0);
+
+  document.getElementById('dashPenjualan').textContent = fmtRp(totalToday);
+  document.getElementById('dashTrx').textContent = trxToday.length;
+  document.getElementById('dashBarang').textContent = state.barang.length;
+
+  const menipis = state.barang.filter(b => b.stok <= b.min);
+  document.getElementById('dashMenipis').textContent = menipis.length;
+
+  const stokList = document.getElementById('dashStokList');
+  if (menipis.length === 0) {
+    stokList.innerHTML = '<div class="empty">✅ Semua stok aman</div>';
+  } else {
+    stokList.innerHTML = menipis.slice(0,5).map(b => `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:13px">
+        <span>${b.nama}</span>
+        <span class="badge ${b.stok === 0 ? 'badge-danger' : 'badge-warning'}">${b.stok === 0 ? 'Habis' : 'Stok: ' + b.stok}</span>
+      </div>
+    `).join('');
+  }
+
+  const bulan = today.slice(0,7);
+  const trxBulan = state.transaksi.filter(t => (t.tgl || '').startsWith(bulan));
+  const masuk = trxBulan.reduce((s,t) => s + t.total, 0);
+  const keluar = state.pengeluaran.filter(p => (p.tgl || '').startsWith(bulan)).reduce((s,p) => s + p.jumlah, 0);
+  const laba = masuk - keluar;
+  document.getElementById('dashKeuangan').innerHTML = `
+    <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px"><span>Pemasukan</span><b style="color:#16a34a">${fmtRp(masuk)}</b></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px"><span>Pengeluaran</span><b style="color:#dc2626">${fmtRp(keluar)}</b></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-top:1px solid #e2e8f0;margin-top:6px"><span>Laba Bersih</span><b style="color:#0284c7">${fmtRp(laba)}</b></div>
+  `;
+}
+
+function renderBarang() {
+  const q = (document.getElementById('searchBarang')?.value || '').toLowerCase();
+  const list = state.barang.filter(b => (b.nama || '').toLowerCase().includes(q));
+  const tbody = document.getElementById('tbodyBarang');
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Belum ada barang. Klik "+ Tambah Barang".</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(b => `
+    <tr>
+      <td><b>${b.nama}</b></td>
+      <td class="text-right">${fmtRp(b.beli)}</td>
+      <td class="text-right">${fmtRp(b.jual)}</td>
+      <td class="text-center"><span class="badge ${b.stok===0?'badge-danger':(b.stok<=b.min?'badge-warning':'badge-success')}">${b.stok}</span></td>
+      <td class="text-center">${b.min}</td>
+      <td class="text-center">
+        <button class="btn btn-outline btn-sm" onclick="openModalBarang('${b.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="hapusBarang('${b.id}')">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openModalBarang(id) {
+  const modal = document.getElementById('modalBarang');
+  document.getElementById('modalBarangTitle').textContent = id ? 'Edit Barang' : 'Tambah Barang';
+  document.getElementById('editId').value = id || '';
+  if (id) {
+    const b = state.barang.find(x => x.id === id);
+    if (b) {
+      document.getElementById('fNama').value = b.nama;
+      document.getElementById('fBeli').value = b.beli;
+      document.getElementById('fJual').value = b.jual;
+      document.getElementById('fStok').value = b.stok;
+      document.getElementById('fMin').value = b.min;
+    }
+  } else {
+    ['fNama','fBeli','fJual','fStok'].forEach(k => document.getElementById(k).value = '');
+    document.getElementById('fMin').value = 5;
+  }
+  modal.classList.add('show');
+}
+function closeModalBarang() { document.getElementById('modalBarang').classList.remove('show'); }
+
+async function simpanBarang() {
+  const id = document.getElementById('editId').value;
+  const nama = document.getElementById('fNama').value.trim();
+  const beli = Number(document.getElementById('fBeli').value);
+  const jual = Number(document.getElementById('fJual').value);
+  const stok = Number(document.getElementById('fStok').value);
+  const min = Number(document.getElementById('fMin').value);
+
+  if (!nama) return alert('Nama barang wajib diisi');
+  if (jual <= 0) return alert('Harga jual harus > 0');
+
+  const barang = { id: id || uid(), nama, beli, jual, stok, min };
+
+  if (id) {
+    const idx = state.barang.findIndex(x => x.id === id);
+    if (idx >= 0) state.barang[idx] = barang;
+  } else {
+    state.barang.push(barang);
+  }
+  saveLocalCache();
+  renderAll();
+
+  await saveBarangToFirebase(barang);
+  closeModalBarang();
+}
+
+async function hapusBarang(id) {
+  if (!confirm('Yakin hapus barang ini?')) return;
+  state.barang = state.barang.filter(b => b.id !== id);
+  saveLocalCache();
+  renderAll();
+  await deleteBarangFromFirebase(id);
+}
+
+function renderProdukGrid() {
+  const q = (document.getElementById('searchKasir')?.value || '').toLowerCase();
+  const grid = document.getElementById('produkGrid');
+  const list = state.barang.filter(b => (b.nama || '').toLowerCase().includes(q));
+  if (list.length === 0) {
+    grid.innerHTML = '<div class="empty">Belum ada produk</div>';
+    return;
+  }
+  grid.innerHTML = list.map(b => `
+    <div class="produk-card ${b.stok===0?'habis':''}" onclick="tambahKeCart('${b.id}')">
+      <div class="nama">${b.nama}</div>
+      <div class="harga">${fmtRp(b.jual)}</div>
+      <div class="stok">Stok: ${b.stok}</div>
+    </div>
+  `).join('');
+}
+
+function tambahKeCart(id) {
+  const b = state.barang.find(x => x.id === id);
+  if (!b || b.stok === 0) return alert('Stok habis!');
+  const existing = cart.find(c => c.id === id);
+  if (existing) {
+    if (existing.qty >= b.stok) return alert('Stok tidak cukup');
+    existing.qty++;
+  } else {
+    cart.push({ id, nama: b.nama, harga: b.jual, qty: 1 });
+  }
+  renderCart();
+}
+
+function renderCart() {
+  const el = document.getElementById('keranjang');
+  if (cart.length === 0) {
+    el.innerHTML = '<div class="empty" style="padding:20px">Keranjang kosong</div>';
+  } else {
+    el.innerHTML = cart.map((c,i) => `
+      <div class="cart-item">
+        <div class="info"><div><b>${c.nama}</b></div><div style="color:#64748b;font-size:12px">${fmtRp(c.harga)} × ${c.qty}</div></div>
+        <div class="qty-controls">
+          <button onclick="ubahQty(${i},-1)">−</button>
+          <span class="qty">${c.qty}</span>
+          <button onclick="ubahQty(${i},1)">+</button>
+        </div>
+        <div style="margin-left:10px;font-weight:700;min-width:70px;text-align:right">${fmtRp(c.harga*c.qty)}</div>
+      </div>
+    `).join('');
+  }
+  const total = cart.reduce((s,c) => s + c.harga*c.qty, 0);
+  document.getElementById('cartTotal').textContent = fmtRp(total);
+  hitungKembalian();
+}
+
+function ubahQty(idx, delta) {
+  const item = cart[idx];
+  const b = state.barang.find(x => x.id === item.id);
+  const newQty = item.qty + delta;
+  if (newQty <= 0) cart.splice(idx,1);
+  else if (newQty > b.stok) return alert('Stok tidak cukup');
+  else item.qty = newQty;
+  renderCart();
+}
+
+function hitungKembalian() {
+  const total = cart.reduce((s,c) => s + c.harga*c.qty, 0);
+  const bayar = Number(document.getElementById('uangBayar').value) || 0;
+  const kembalian = bayar - total;
+  document.getElementById('kembalian').textContent = kembalian >= 0 ? fmtRp(kembalian) : 'Kurang ' + fmtRp(-kembalian);
+}
+
+function clearCart() {
+  if (cart.length === 0) return;
+  if (!confirm('Kosongkan keranjang?')) return;
+  cart = [];
+  document.getElementById('uangBayar').value = '';
+  renderCart();
+}
+
+async function simpanTransaksi() {
+  if (cart.length === 0) return alert('Keranjang masih kosong');
+  const total = cart.reduce((s,c) => s + c.harga*c.qty, 0);
+  const bayar = Number(document.getElementById('uangBayar').value) || 0;
+  if (bayar < total) return alert('Uang bayar kurang dari total');
+
+  const trx = {
+    id: 'TRX' + Date.now().toString().slice(-8),
+    tgl: todayStr(),
+    waktu: new Date().toLocaleString('id-ID'),
+    ts: Date.now(),
+    items: cart.map(c => ({ nama: c.nama, harga: c.harga, qty: c.qty })),
+    total, bayar, kembali: bayar - total
+  };
+
+  const updates = [];
+  cart.forEach(c => {
+    const b = state.barang.find(x => x.id === c.id);
+    if (b) {
+      b.stok -= c.qty;
+      updates.push(saveBarangToFirebase(b));
+    }
+  });
+
+  state.transaksi.unshift(trx);
+  saveLocalCache();
+  renderAll();
+
+  await saveTransaksiToFirebase(trx);
+  await Promise.all(updates);
+
+  cart = [];
+  document.getElementById('uangBayar').value = '';
+  renderCart();
+  alert(`✅ Transaksi tersimpan!\nKembalian: ${fmtRp(trx.kembali)}`);
+}
+
+function renderRiwayat() {
+  const filter = document.getElementById('filterRiwayat')?.value || '';
+  let list = state.transaksi;
+  if (filter) list = list.filter(t => t.tgl === filter);
+
+  const tbody = document.getElementById('tbodyRiwayat');
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">Belum ada transaksi</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(t => `
+    <tr>
+      <td><b>${t.id}</b></td>
+      <td>${t.waktu}</td>
+      <td>${(t.items || []).length} item</td>
+      <td class="text-right"><b>${fmtRp(t.total)}</b></td>
+      <td class="text-center"><button class="btn btn-outline btn-sm" onclick="detailTransaksi('${t.id}')">👁️ Detail</button></td>
+    </tr>
+  `).join('');
+}
+
+function detailTransaksi(id) {
+  const t = state.transaksi.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('detailContent').innerHTML = `
+    <p style="font-size:13px;color:#64748b;margin-bottom:10px">${t.waktu}</p>
+    <table style="margin-bottom:12px">
+      <thead><tr><th>Barang</th><th class="text-right">Harga</th><th class="text-center">Qty</th><th class="text-right">Subtotal</th></tr></thead>
+      <tbody>${(t.items || []).map(i => `<tr><td>${i.nama}</td><td class="text-right">${fmtRp(i.harga)}</td><td class="text-center">${i.qty}</td><td class="text-right">${fmtRp(i.harga*i.qty)}</td></tr>`).join('')}</tbody>
+    </table>
+    <div style="background:#f8fafc;padding:12px;border-radius:8px;font-size:13px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Total</span><b>${fmtRp(t.total)}</b></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Bayar</span><span>${fmtRp(t.bayar)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span>Kembalian</span><b style="color:#16a34a">${fmtRp(t.kembali)}</b></div>
+    </div>
+  `;
+  document.getElementById('modalDetail').classList.add('show');
+}
+
+function renderKeuangan() {
+  const masuk = state.transaksi.reduce((s,t) => s + t.total, 0);
+  const keluar = state.pengeluaran.reduce((s,p) => s + p.jumlah, 0);
+  document.getElementById('finMasuk').textContent = fmtRp(masuk);
+  document.getElementById('finKeluar').textContent = fmtRp(keluar);
+  document.getElementById('finLaba').textContent = fmtRp(masuk - keluar);
+
+  const tbody = document.getElementById('tbodyPengeluaran');
+  if (state.pengeluaran.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Belum ada pengeluaran</td></tr>';
+  } else {
+    tbody.innerHTML = state.pengeluaran.map(p => `
+      <tr>
+        <td>${p.tgl}</td><td>${p.kategori}: ${p.ket}</td>
+        <td class="text-right">${fmtRp(p.jumlah)}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="hapusPengeluaran('${p.id}')">🗑️</button></td>
+      </tr>
+    `).join('');
+  }
+  if (!document.getElementById('pengTgl').value) {
+    document.getElementById('pengTgl').value = todayStr();
+  }
+}
+
+async function tambahPengeluaran() {
+  const tgl = document.getElementById('pengTgl').value;
+  const kategori = document.getElementById('pengKategori').value;
+  const ket = document.getElementById('pengKet').value.trim();
+  const jumlah = Number(document.getElementById('pengJumlah').value);
+
+  if (!tgl || !ket || jumlah <= 0) return alert('Lengkapi data pengeluaran');
+
+  const p = { id: uid(), tgl, kategori, ket, jumlah, ts: Date.now() };
+  state.pengeluaran.unshift(p);
+  saveLocalCache();
+  renderAll();
+  document.getElementById('pengKet').value = '';
+  document.getElementById('pengJumlah').value = '';
+
+  await savePengeluaranToFirebase(p);
+}
+
+async function hapusPengeluaran(id) {
+  if (!confirm('Hapus pengeluaran ini?')) return;
+  state.pengeluaran = state.pengeluaran.filter(p => p.id !== id);
+  saveLocalCache();
+  renderAll();
+  await deletePengeluaranFromFirebase(id);
+}
+
+function renderStokMenipis() {
+  const list = state.barang.filter(b => b.stok <= b.min).sort((a,b) => a.stok - b.stok);
+  const el = document.getElementById('stokMenipisContainer');
+  if (list.length === 0) {
+    el.innerHTML = '<div class="box empty">✅ Semua stok aman, tidak ada yang menipis</div>';
+    return;
+  }
+  el.innerHTML = `
+    <table>
+      <thead><tr><th>Barang</th><th class="text-center">Stok</th><th class="text-center">Min</th><th class="text-center">Status</th><th class="text-center">Aksi</th></tr></thead>
+      <tbody>${list.map(b => `
+        <tr>
+          <td><b>${b.nama}</b></td>
+          <td class="text-center">${b.stok}</td>
+          <td class="text-center">${b.min}</td>
+          <td class="text-center"><span class="badge ${b.stok===0?'badge-danger':'badge-warning'}">${b.stok===0?'Habis':'Menipis'}</span></td>
+          <td class="text-center"><button class="btn btn-primary btn-sm" onclick="openModalBarang('${b.id}')">Update Stok</button></td>
+        </tr>
+      `).join('')}</tbody>
+    </table>
+  `;
+}
+
+function renderPengaturan() {
+  document.getElementById('setNama').value = state.pengaturan.nama || '';
+  document.getElementById('setAlamat').value = state.pengaturan.alamat || '';
+  document.getElementById('setTelp').value = state.pengaturan.telp || '';
+}
+
+async function simpanPengaturan() {
+  state.pengaturan = {
+    nama: document.getElementById('setNama').value.trim() || 'Warung Ibu',
+    alamat: document.getElementById('setAlamat').value.trim(),
+    telp: document.getElementById('setTelp').value.trim()
+  };
+  saveLocalCache();
+  updateSidebarNama();
+
+  if (firebaseConnected && database) {
+    try {
+      await database.ref(FB_PATH + '/pengaturan').set(state.pengaturan);
+    } catch(err) {
+      console.warn('Gagal simpan pengaturan ke Firebase:', err);
+    }
+  }
+  alert('✅ Pengaturan tersimpan');
+}
+
+/* ==================================================
+   BACKUP KE EXCEL (.xls multi-sheet)
+   ================================================== */
+function backupData() {
+  const today = todayStr();
+  const now = new Date().toLocaleString('id-ID');
+
+  let sheetBarang = `
+    <table>
+      <tr><td colspan="6" style="font-size:14pt;font-weight:bold;background:#0b3b5c;color:#fff;padding:10px;text-align:center;">DATA BARANG - ${state.pengaturan.nama || 'Warung'}</td></tr>
+      <tr><td colspan="6" style="font-size:10pt;background:#e9f2fa;padding:6px;text-align:center;">Diekspor: ${now}</td></tr>
+      <tr>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">No</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Nama Barang</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Harga Beli</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Harga Jual</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Stok</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Stok Min</th>
+      </tr>
+  `;
+  if (state.barang.length === 0) {
+    sheetBarang += `<tr><td colspan="6" style="text-align:center;padding:10px;border:1px solid #ccc;">Belum ada data barang</td></tr>`;
+  } else {
+    state.barang.forEach((b, i) => {
+      sheetBarang += `
+        <tr>
+          <td style="text-align:center;padding:6px;border:1px solid #ccc;">${i+1}</td>
+          <td style="padding:6px;border:1px solid #ccc;">${b.nama}</td>
+          <td style="text-align:right;padding:6px;border:1px solid #ccc;">${b.beli}</td>
+          <td style="text-align:right;padding:6px;border:1px solid #ccc;">${b.jual}</td>
+          <td style="text-align:center;padding:6px;border:1px solid #ccc;${b.stok <= b.min ? 'color:#c62828;font-weight:bold;' : ''}">${b.stok}</td>
+          <td style="text-align:center;padding:6px;border:1px solid #ccc;">${b.min}</td>
+        </tr>
+      `;
+    });
+  }
+  sheetBarang += `</table>`;
+
+  let sheetTransaksi = `
+    <table>
+      <tr><td colspan="8" style="font-size:14pt;font-weight:bold;background:#0b3b5c;color:#fff;padding:10px;text-align:center;">RIWAYAT TRANSAKSI - ${state.pengaturan.nama || 'Warung'}</td></tr>
+      <tr><td colspan="8" style="font-size:10pt;background:#e9f2fa;padding:6px;text-align:center;">Diekspor: ${now}</td></tr>
+      <tr>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">No. Transaksi</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Tanggal</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Waktu</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Item</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Total</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Bayar</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Kembalian</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Detail Item</th>
+      </tr>
+  `;
+  if (state.transaksi.length === 0) {
+    sheetTransaksi += `<tr><td colspan="8" style="text-align:center;padding:10px;border:1px solid #ccc;">Belum ada transaksi</td></tr>`;
+  } else {
+    state.transaksi.forEach(t => {
+      const detail = (t.items || []).map(i => `${i.nama} (${i.qty}x${i.harga})`).join(', ');
+      sheetTransaksi += `
+        <tr>
+          <td style="padding:6px;border:1px solid #ccc;">${t.id}</td>
+          <td style="padding:6px;border:1px solid #ccc;">${t.tgl}</td>
+          <td style="padding:6px;border:1px solid #ccc;">${t.waktu}</td>
+          <td style="text-align:center;padding:6px;border:1px solid #ccc;">${(t.items||[]).length}</td>
+          <td style="text-align:right;padding:6px;border:1px solid #ccc;">${t.total}</td>
+          <td style="text-align:right;padding:6px;border:1px solid #ccc;">${t.bayar}</td>
+          <td style="text-align:right;padding:6px;border:1px solid #ccc;">${t.kembali}</td>
+          <td style="padding:6px;border:1px solid #ccc;font-size:9pt;">${detail}</td>
+        </tr>
+      `;
+    });
+  }
+  sheetTransaksi += `</table>`;
+
+  let sheetPengeluaran = `
+    <table>
+      <tr><td colspan="5" style="font-size:14pt;font-weight:bold;background:#0b3b5c;color:#fff;padding:10px;text-align:center;">PENGELUARAN - ${state.pengaturan.nama || 'Warung'}</td></tr>
+      <tr><td colspan="5" style="font-size:10pt;background:#e9f2fa;padding:6px;text-align:center;">Diekspor: ${now}</td></tr>
+      <tr>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">No</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Tanggal</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Kategori</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Keterangan</th>
+        <th style="background:#0b3b5c;color:#fff;padding:8px;border:1px solid #333;">Jumlah</th>
+      </tr>
+  `;
+  if (state.pengeluaran.length === 0) {
+    sheetPengeluaran += `<tr><td colspan="5" style="text-align:center;padding:10px;border:1px solid #ccc;">Belum ada pengeluaran</td></tr>`;
+  } else {
+    state.pengeluaran.forEach((p, i) => {
+      sheetPengeluaran += `
+        <tr>
+          <td style="text-align:center;padding:6px;border:1px solid #ccc;">${i+1}</td>
+          <td style="padding:6px;border:1px solid #ccc;">${p.tgl}</td>
+          <td style="padding:6px;border:1px solid #ccc;">${p.kategori}</td>
+          <td style="padding:6px;border:1px solid #ccc;">${p.ket}</td>
+          <td style="text-align:right;padding:6px;border:1px solid #ccc;">${p.jumlah}</td>
+        </tr>
+      `;
+    });
+  }
+  sheetPengeluaran += `
+      <tr>
+        <td colspan="4" style="text-align:right;font-weight:bold;padding:8px;border:1px solid #333;background:#fee2e2;">TOTAL PENGELUARAN</td>
+        <td style="text-align:right;font-weight:bold;padding:8px;border:1px solid #333;background:#fee2e2;color:#c62828;">${state.pengeluaran.reduce((s,p) => s + p.jumlah, 0)}</td>
+      </tr>
+    </table>
+  `;
+
+  const totalPemasukan = state.transaksi.reduce((s,t) => s + t.total, 0);
+  const totalPengeluaran = state.pengeluaran.reduce((s,p) => s + p.jumlah, 0);
+  const labaBersih = totalPemasukan - totalPengeluaran;
+
+  let sheetPengaturan = `
+    <table>
+      <tr><td colspan="2" style="font-size:14pt;font-weight:bold;background:#0b3b5c;color:#fff;padding:10px;text-align:center;">PENGATURAN & RINGKASAN</td></tr>
+      <tr><td colspan="2" style="font-size:10pt;background:#e9f2fa;padding:6px;text-align:center;">Diekspor: ${now}</td></tr>
+      <tr><td colspan="2" style="height:10px;"></td></tr>
+
+      <tr><td colspan="2" style="font-size:12pt;font-weight:bold;background:#1a4d6e;color:#fff;padding:8px;border:1px solid #333;">🏪 IDENTITAS WARUNG</td></tr>
+      <tr><td style="font-weight:bold;padding:6px;border:1px solid #ccc;background:#e9f2fa;">Nama Warung</td><td style="padding:6px;border:1px solid #ccc;">${state.pengaturan.nama || '-'}</td></tr>
+      <tr><td style="font-weight:bold;padding:6px;border:1px solid #ccc;background:#e9f2fa;">Alamat</td><td style="padding:6px;border:1px solid #ccc;">${state.pengaturan.alamat || '-'}</td></tr>
+      <tr><td style="font-weight:bold;padding:6px;border:1px solid #ccc;background:#e9f2fa;">No. Telepon / WA</td><td style="padding:6px;border:1px solid #ccc;">${state.pengaturan.telp || '-'}</td></tr>
+
+      <tr><td colspan="2" style="height:10px;"></td></tr>
+      <tr><td colspan="2" style="font-size:12pt;font-weight:bold;background:#1a4d6e;color:#fff;padding:8px;border:1px solid #333;">📊 RINGKASAN KEUANGAN</td></tr>
+      <tr><td style="font-weight:bold;padding:6px;border:1px solid #ccc;background:#e9f2fa;">Total Barang</td><td style="padding:6px;border:1px solid #ccc;">${state.barang.length} jenis</td></tr>
+      <tr><td style="font-weight:bold;padding:6px;border:1px solid #ccc;background:#e9f2fa;">Total Transaksi</td><td style="padding:6px;border:1px solid #ccc;">${state.transaksi.length} transaksi</td></tr>
+      <tr><td style="font-weight:bold;padding:6px;border:1px solid #ccc;background:#e9f2fa;">Total Pemasukan</td><td style="padding:6px;border:1px solid #ccc;color:#15803d;font-weight:bold;">Rp ${totalPemasukan.toLocaleString('id-ID')}</td></tr>
+      <tr><td style="font-weight:bold;padding:6px;border:1px solid #ccc;background:#e9f2fa;">Total Pengeluaran</td><td style="padding:6px;border:1px solid #ccc;color:#c62828;font-weight:bold;">Rp ${totalPengeluaran.toLocaleString('id-ID')}</td></tr>
+      <tr><td style="font-weight:bold;padding:6px;border:1px solid #ccc;background:#e9f2fa;">Laba Bersih</td><td style="padding:6px;border:1px solid #ccc;color:#0b3b5c;font-weight:bold;background:#e0f2fe;">Rp ${labaBersih.toLocaleString('id-ID')}</td></tr>
+      <tr><td style="font-weight:bold;padding:6px;border:1px solid #ccc;background:#e9f2fa;">Stok Menipis</td><td style="padding:6px;border:1px solid #ccc;color:#c62828;font-weight:bold;">${state.barang.filter(b => b.stok <= b.min).length} barang</td></tr>
+
+      <tr><td colspan="2" style="height:10px;"></td></tr>
+      <tr><td colspan="2" style="text-align:center;font-size:9pt;color:#666;padding:10px;border:1px solid #ccc;background:#f9fcff;">Backup dibuat oleh Website Data Warung</td></tr>
+    </table>
+  `;
+
+  const excelHTML = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office"
+          xmlns:x="urn:schemas-microsoft-com:office:excel"
+          xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="UTF-8">
+      <!--[if gte mso 9]>
+      <xml>
+        <x:ExcelWorkbook>
+          <x:ExcelWorksheets>
+            <x:ExcelWorksheet>
+              <x:Name>Barang</x:Name>
+              <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+            </x:ExcelWorksheet>
+            <x:ExcelWorksheet>
+              <x:Name>Transaksi</x:Name>
+              <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+            </x:ExcelWorksheet>
+            <x:ExcelWorksheet>
+              <x:Name>Pengeluaran</x:Name>
+              <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+            </x:ExcelWorksheet>
+            <x:ExcelWorksheet>
+              <x:Name>Pengaturan</x:Name>
+              <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+            </x:ExcelWorksheet>
+          </x:ExcelWorksheets>
+        </x:ExcelWorkbook>
+      </xml>
+      <![endif]-->
+      <style>
+        table { border-collapse: collapse; font-family: 'Calibri', Arial, sans-serif; font-size: 10pt; }
+        td, th { vertical-align: middle; }
+      </style>
+    </head>
+    <body>
+      ${sheetBarang}
+      <br>
+      ${sheetTransaksi}
+      <br>
+      ${sheetPengeluaran}
+      <br>
+      ${sheetPengaturan}
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob(['\ufeff' + excelHTML], {
+    type: 'application/vnd.ms-excel;charset=utf-8'
+  });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `Backup_Warung_${today}.xls`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+
+  console.log('✅ Backup Excel berhasil diunduh');
+}
+
+async function restoreData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.barang && !data.transaksi) throw new Error('Format tidak valid');
+      if (!confirm('Data Firebase akan DIGANTI dengan data dari file backup. Lanjutkan?')) return;
+
+      state = { ...state, ...data };
+      saveLocalCache();
+      updateSidebarNama();
+      renderAll();
+
+      if (firebaseConnected && database) {
+        await database.ref(FB_PATH).set({
+          barang: state.barang.reduce((o,b) => (o[b.id]=b,o), {}),
+          transaksi: state.transaksi.reduce((o,t) => (o[t.id]=t,o), {}),
+          pengeluaran: state.pengeluaran.reduce((o,p) => (o[p.id]=p,o), {}),
+          pengaturan: state.pengaturan
+        });
+      }
+      alert('✅ Data berhasil dipulihkan & disinkronkan ke Firebase');
+    } catch(err) {
+      alert('❌ File tidak valid: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function resetSemua() {
+  if (!confirm('⚠️ SEMUA DATA (Firebase + lokal) akan dihapus permanen. Yakin?')) return;
+  if (!confirm('Yakin sekali? Tindakan ini tidak bisa dibatalkan.')) return;
+
+  state = { barang: [], transaksi: [], pengeluaran: [], pengaturan: { nama: 'Warung Ibu', alamat: '', telp: '' } };
+  localStorage.removeItem(STORAGE_KEY);
+  updateSidebarNama();
+  renderAll();
+
+  if (firebaseConnected && database) {
+    try {
+      await database.ref(FB_PATH).remove();
+    } catch(err) {
+      console.warn('Gagal hapus Firebase:', err);
+    }
+  }
+  alert('✅ Data direset');
+}
+
+loadLocalCache();
+initFirebaseSync();
+
+console.log('🏪 Website Data Warung siap!');
+console.log(firebaseConnected ? '🔥 Firebase Connected — data tersinkron real-time.' : '💾 Offline mode — data lokal saja.');
+</script>
+</body>
+</html>
